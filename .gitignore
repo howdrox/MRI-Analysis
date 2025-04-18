@@ -1,0 +1,5 @@
+venv/
+BrainMRI/
+
+__pycache__/
+.cache/
