@@ -1,4 +1,4 @@
-\documentclass[11pt,a4paper,twocolumn]{article}
+\documentclass[11pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -15,6 +15,107 @@
 
 \maketitle
 
-\section{}
+\section{Introduction}
+Medical image analysis is a critical field in healthcare. In this project the goal was to use a neural network to detect regions of legion in brain MRI images.
+
+A UNet architecture was used for this task. UNet is a convolutional neural network that was originally designed for biomedical image segmentation \cite{ronneberger2015u}. It has a U-shaped architecture that consists of a contracting path to capture context and a symmetric expanding path that enables precise localization.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{./img/unet_architecture.png}
+    \caption{UNet Architecture}
+    \label{fig:unet_architecture}
+\end{figure}
+
+\section{Architecture}
+The UNet architecture consists of two main parts: the encoder and the decoder. The encoder captures the context of the image, while the decoder enables precise localization. The architecture is symmetric, with skip connections that allow for better gradient flow and feature reuse.
+
+\subsection{Dice Coeeficient}
+The loss function used is the Dice coefficient, which is a measure of overlap between two samples. It is defined as:
+\begin{equation}
+    \text{Dice}(A, B) = \frac{2 |A \cap B|}{|A| + |B|}
+\end{equation}
+where \(A\) and \(B\) are the predicted and ground truth masks, respectively. The Dice coefficient ranges from 0 to 1, where 1 indicates perfect overlap.
+
+However, the Dice coefficient was also used to calculate the accuracy of the model. The accuracy is defined as:
+\begin{equation}
+    \text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}
+\end{equation}
+where \(TP\) is true positive, \(TN\) is true negative, \(FP\) is false positive, and \(FN\) is false negative.
+
+Accuracy includes true negatives (correctly labeled background pixels), which often dominate in medical images (e.g., brain scans with small lesions). As a result, a model that labels every pixel as background can achieve high accuracy while completely missing lesions.
+
+Dice ignores true negatives, focusing only on the overlap of the foreground object. This makes it much more sensitive to how well the model segments the structure of interest, especially when that structure occupies a small fraction of the image.
+
+Therefore, the Dice coefficient is a better metric for evaluating the performance of the model in this case.
+
+\section{Training}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} \\
+    \midrule
+    batch\_size   & 16 \\
+    epochs        & 7 \\
+    lr            & 0.0003 \\
+    workers       & 0 \\
+    vis\_images   & 200 \\
+    vis\_freq     & 10 \\
+    image\_size   & 256 \\
+    aug\_scale    & 0.05 \\
+    aug\_angle    & 15 \\
+    \bottomrule
+    \end{tabular}
+    \caption{Training Configuration Parameters}
+    \label{tab:args}
+\end{table}
+    
+Running the training script takes a long time, arount 40 minutes per epoch. Therefore I limited the number of epochs to 7. As we can see from \autoref{fig:training_loss}, the loss plateaus after 800 steps (around 4 epochs)
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{./img/training_loss.png}
+    \caption{Loss over epochs}
+    \label{fig:training_loss}
+\end{figure}
+
+Moreover, \autoref{fig:validation_metric_per_epoch} shows the validation loss and DSC per epoch. This gives a better understanding of the model performance. We can see that the validation loss decreases much like over training, but its value is much higher than the training loss. This indicates that the model is overfitting to the training data. On the other hand, the validation DSC increases slightly in the beginning, but then fluctuates around 0.8.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{./img/validation_metric_per_epoch.png}
+    \caption{Validation metrics per epoch}
+    \label{fig:validation_metric_per_epoch}
+\end{figure}
+
+\section{Results}
+To further evaluate the model, \autoref{fig:validation_accuracy} and \autoref{fig:validation_dsc} show accuracy and DSC metrics for the validation set. Each results are grouped by patients. The accuracy is greater than 0.98, which is very high. However, the DSC is only around 0.8. The red line represents the mean and the green line the median.
+
+The patient \textit{3m\textbackslash TCGA\_CS\_6668} has a DSC score of 0, this is because the model predicted false positives for some of the images.
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{./img/validation_accuracy.png}
+        \caption{Validation Accuracy}
+        \label{fig:validation_accuracy}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{./img/validation_dsc.png}
+        \caption{Validation DSC}
+        \label{fig:validation_dsc}
+    \end{minipage}
+\end{figure}
+
+
+\begin{thebibliography}{9}
+\bibitem{ronneberger2015u}
+Ronneberger, O., Fischer, P., \& Brox, T. (2015). U-Net: Convolutional Networks for Biomedical Image Segmentation. \textit{Medical Image Computing and Computer-Assisted Intervention (MICCAI)}. \url{https://arxiv.org/abs/1505.04597}
+\bibitem{kaggle}
+Kaggle. (n.d.). Brain MRI dataset. Retrieved from \url{https://www.kaggle.com/mateuszbuda/lgg-mri-segmentation}
+\end{thebibliography}
 
 \end{document}

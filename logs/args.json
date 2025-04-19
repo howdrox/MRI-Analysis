@@ -1,1 +1,1 @@
-{}
+{"device": "cuda:0", "batch_size": 32, "epochs": 7, "lr": 0.001, "workers": 0, "vis_images": 200, "vis_freq": 10, "weights": "./weights", "logs": "./logs", "images": "./BrainMRI/kaggle_3m", "image_size": 256, "aug_scale": 0.05, "aug_angle": 15}

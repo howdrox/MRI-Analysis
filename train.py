@@ -91,19 +91,19 @@ def snapshotargs(args):
 
 @dataclass
 class Args:
-    device = "cuda:0"
-    batch_size = 32
-    epochs = 7
-    lr = 0.001
-    workers = 0
-    vis_images = 200
-    vis_freq = 10
-    weights = "./weights"
-    logs = "./logs"
-    images = "BrainMRI/kaggle_3m"
-    image_size = 256
-    aug_scale = 0.05
-    aug_angle = 15
+    device: str = "cuda:0"
+    batch_size: int = 32
+    epochs: int = 1
+    lr: float = 0.001
+    workers: int = 0
+    vis_images: int = 200
+    vis_freq: int = 10
+    weights: str = "./weights"
+    logs: str = "./logs"
+    images: str = "./BrainMRI/kaggle_3m"
+    image_size: int = 256
+    aug_scale: float = 0.05
+    aug_angle: int = 15
 
 
 def main():
@@ -208,6 +208,23 @@ def main():
                     loss_train = []
 
             if phase == "valid":
+                tp_total, tn_total, fp_total, fn_total = 0, 0, 0, 0
+                # For each slice in the validation batch
+                for y_pred_np, y_true_np in zip(validation_pred, validation_true):
+                    # Threshold predictions at 0.5
+                    pred_prob = 1 / (1 + np.exp(-y_pred_np))
+                    pred_bin  = (pred_prob >= 0.5).astype(np.uint8)
+                    true_bin = (y_true_np >= 0.5).astype(np.uint8)
+
+                    tp_total += np.logical_and(pred_bin == 1, true_bin == 1).sum()
+                    tn_total += np.logical_and(pred_bin == 0, true_bin == 0).sum()
+                    fp_total += np.logical_and(pred_bin == 1, true_bin == 0).sum()
+                    fn_total += np.logical_and(pred_bin == 0, true_bin == 1).sum()
+                accuracy = (tp_total + tn_total) / (tp_total + tn_total + fp_total + fn_total + 1e-8)
+                # Log accuracy
+                logger.scalar_summary("val_accuracy", accuracy, step)
+                print(f"epoch {epoch+1} | val_accuracy: {accuracy:.4f}")
+
                 log_loss_summary(logger, loss_valid, step, prefix="val_")
                 print("epoch {} | val_loss: {}".format(epoch + 1, np.mean(loss_valid)))
                 mean_dsc = np.mean(
