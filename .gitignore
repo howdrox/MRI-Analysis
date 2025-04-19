@@ -1,5 +1,6 @@
 venv/
 BrainMRI/
+weights/
 
 __pycache__/
 .cache/

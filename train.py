@@ -17,8 +17,10 @@ from transform import transforms
 from unet import UNet
 from utils import log_images, dsc
 
+
 def worker_init(worker_id):
     np.random.seed(42 + worker_id)
+
 
 def data_loaders(args):
     dataset_train, dataset_valid = datasets(args)
@@ -86,26 +88,30 @@ def snapshotargs(args):
     with open(args_file, "w") as fp:
         json.dump(vars(args), fp)
 
+
 @dataclass
 class Args:
-    device = 'cuda:0'
-    batch_size = 16
-    epochs = 5
-    lr = 0.0003
+    device = "cuda:0"
+    batch_size = 32
+    epochs = 7
+    lr = 0.001
     workers = 0
     vis_images = 200
     vis_freq = 10
-    weights = './weights'
-    logs = './logs'
-    images = 'BrainMRI/kaggle_3m'
+    weights = "./weights"
+    logs = "./logs"
+    images = "BrainMRI/kaggle_3m"
     image_size = 256
     aug_scale = 0.05
     aug_angle = 15
 
+
 def main():
     args = Args()
 
-    assert osp.exists(args.images), "Please download the dataset and set the correct path" 
+    assert osp.exists(
+        args.images
+    ), "Please download the dataset and set the correct path"
 
     # save configs
     makedirs(args)
@@ -192,10 +198,13 @@ def main():
                         loss.backward()
                         optimizer.step()
 
-                if phase == "train" and (step + 1) % 10 == 0:
+                if phase == "train" and step % 10 == 0:
                     log_loss_summary(logger, loss_train, step)
-                    print("epoch {}, phase {}, step {}, loss_train, {:.3f}".format(
-                            epoch, phase, step, np.mean(loss_train)))
+                    print(
+                        "epoch {}, phase {}, step {}, loss_train, {:.3f}".format(
+                            epoch + 1, phase, step, np.mean(loss_train)
+                        )
+                    )
                     loss_train = []
 
             if phase == "valid":
@@ -209,13 +218,15 @@ def main():
                     )
                 )
                 logger.scalar_summary("val_dsc", mean_dsc, step)
-                print("epoch {} | val_dsc: {}".format(epoch+1, mean_dsc))
+                print("epoch {} | val_dsc: {}".format(epoch + 1, mean_dsc))
                 if mean_dsc > best_validation_dsc:
                     best_validation_dsc = mean_dsc
                     torch.save(unet.state_dict(), os.path.join(args.weights, "unet.pt"))
                 loss_valid = []
+                print("Time: ", datetime.now())
 
     print("Best validation mean DSC: {:4f}".format(best_validation_dsc))
+
 
 if __name__ == "__main__":
     start_time = datetime.now()
