@@ -91,10 +91,11 @@ def snapshotargs(args):
 
 @dataclass
 class Args:
-    device: str = "cuda:0"
+    device: str = "cpu"
     batch_size: int = 32
-    epochs: int = 1
+    epochs: int = 10
     lr: float = 0.001
+    wd: float = 0.0001
     workers: int = 0
     vis_images: int = 200
     vis_freq: int = 10
@@ -133,7 +134,7 @@ def main():
         print("Loaded checkpoint from", checkpoint_path)
 
     # build optimizer
-    optimizer = optim.Adam(unet.parameters(), lr=args.lr)
+    optimizer = optim.Adam(unet.parameters(), lr=args.lr, weight_decay=args.wd)
 
     # build metric
     dsc_loss = DiceLoss()
@@ -149,7 +150,7 @@ def main():
 
     for epoch in range(args.epochs):
         for phase in ["train", "valid"]:
-            print("epoch {}, phase {}, total step {}".format(epoch, phase, step))
+            print("epoch {}, phase {}, total step {}".format(epoch + 1, phase, step))
 
             if phase == "train":
                 unet.train()
@@ -213,14 +214,16 @@ def main():
                 for y_pred_np, y_true_np in zip(validation_pred, validation_true):
                     # Threshold predictions at 0.5
                     pred_prob = 1 / (1 + np.exp(-y_pred_np))
-                    pred_bin  = (pred_prob >= 0.5).astype(np.uint8)
+                    pred_bin = (pred_prob >= 0.5).astype(np.uint8)
                     true_bin = (y_true_np >= 0.5).astype(np.uint8)
 
                     tp_total += np.logical_and(pred_bin == 1, true_bin == 1).sum()
                     tn_total += np.logical_and(pred_bin == 0, true_bin == 0).sum()
                     fp_total += np.logical_and(pred_bin == 1, true_bin == 0).sum()
                     fn_total += np.logical_and(pred_bin == 0, true_bin == 1).sum()
-                accuracy = (tp_total + tn_total) / (tp_total + tn_total + fp_total + fn_total + 1e-8)
+                accuracy = (tp_total + tn_total) / (
+                    tp_total + tn_total + fp_total + fn_total + 1e-8
+                )
                 # Log accuracy
                 logger.scalar_summary("val_accuracy", accuracy, step)
                 print(f"epoch {epoch+1} | val_accuracy: {accuracy:.4f}")
